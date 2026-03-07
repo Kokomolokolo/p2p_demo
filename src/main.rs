@@ -1,4 +1,5 @@
 use bevy::{camera::ScalingMode, input::keyboard::Key, prelude::*, transform};
+use bevy_matchbox::prelude::*;
 
 fn main() {
     App::new()
@@ -13,8 +14,8 @@ fn main() {
         ..default()
     }))
     .insert_resource(ClearColor(Color::srgb(0.55, 0.53, 0.55)))
-    .add_systems(Startup, (setup, spawn_player))
-    .add_systems(Update, move_player)
+    .add_systems(Startup, (setup, spawn_player, start_matchbox_socket))
+    .add_systems(Update, (move_player, wait_for_players))
     .run();
 }
 
@@ -31,6 +32,16 @@ fn setup(mut commands: Commands) {
             ..OrthographicProjection::default_2d()
         }),
     ));
+}
+
+fn start_matchbox_socket(mut commands: Commands) {
+    // Part before ? is an id, if we want to host multiple games on one matchbox server
+    // after ? is for 2 players if i understood right
+    let room_url = "ws://127.0.0.1:3536/p2p_demo?next=2";
+
+
+    info!("connectiog to matchbox server: {room_url}");
+    commands.insert_resource(MatchboxSocket::new_unreliable(room_url));
 }
 
 #[derive(Component)]
@@ -74,4 +85,23 @@ fn move_player(
     for mut transform in &mut players {
         transform.translation += move_delta.extend(0.); // Extend, bc translations work in 3d, but the movenent delta has 2d
     }
+}
+
+fn wait_for_players(mut socket: ResMut<MatchboxSocket>) {
+    if socket.get_channel(0).is_err() {
+        return; // already started
+    }
+
+    // Check for new connections
+    socket.update_peers();
+    let players = socket.players();
+
+    let num_players = 2;
+    if players.len() < num_players {
+        return; // waiting for more players
+    }
+
+    info!("All peers have joined, going in game");
+
+    // todo
 }
