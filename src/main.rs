@@ -9,17 +9,18 @@ use bevy_ggrs::{
 };
 use bevy_matchbox::prelude::*;
 
+use input::*;
+use componets::*;
+
+mod input;
+mod componets;
+
 // Config-Typ definieren
 // u8, input type: 4 directions + fire fits in a single byte
 // PeerIs: address type of peers
 type Config = GgrsConfig<u8, PeerId>;
 
-// Bit mask, for the diffrent inputs
-const INPUT_UP: u8 = 1 << 0; // 0000 0001
-const INPUT_DOWN: u8 = 1 << 1; // 0000 0010
-const INPUT_LEFT: u8 = 1 << 2; // etc.
-const INPUT_RIGHT: u8 = 1 << 3;
-const INPUT_FIRE: u8 = 1 << 4;
+
 
 fn main() {
     App::new()
@@ -64,14 +65,12 @@ fn start_matchbox_socket(mut commands: Commands) {
     // after ? is for 2 players if i understood right
     let room_url = "ws://127.0.0.1:3536/p2p_demo?next=2";
 
+    //let room_url = "wss://okoloki.com/matchbox/p2pdems?next=2";
+
     info!("connectiog to matchbox server: {room_url}");
     commands.insert_resource(MatchboxSocket::new_unreliable(room_url));
 }
 
-#[derive(Component)]
-struct Player {
-    handle: usize,
-}
 
 fn spawn_player(mut commands: Commands) {
     commands
@@ -141,37 +140,7 @@ fn wait_for_players(mut commands: Commands, mut socket: ResMut<MatchboxSocket>) 
     spawn_player(commands);
 }
 
-fn read_local_inputs(
-    mut commands: Commands,
-    keys: Res<ButtonInput<KeyCode>>,
-    local_players: Res<LocalPlayers>,
-) {
-    let mut local_inputs = HashMap::new();
 
-    for handle in &local_players.0 {
-        let mut input: u8 = 0;
-
-        if keys.any_pressed([KeyCode::ArrowUp, KeyCode::KeyW]) {
-            input |= INPUT_UP;
-        }
-        if keys.any_pressed([KeyCode::ArrowDown, KeyCode::KeyS]) {
-            input |= INPUT_DOWN;
-        }
-        if keys.any_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]) {
-            input |= INPUT_LEFT
-        }
-        if keys.any_pressed([KeyCode::ArrowRight, KeyCode::KeyD]) {
-            input |= INPUT_RIGHT;
-        }
-        if keys.any_pressed([KeyCode::Space, KeyCode::Enter]) {
-            input |= INPUT_FIRE;
-        }
-
-        local_inputs.insert(*handle, input);
-    }
-
-    commands.insert_resource(LocalInputs::<Config>(local_inputs));
-}
 
 fn move_players(
     mut players: Query<(&mut Transform, &Player)>,
@@ -182,20 +151,8 @@ fn move_players(
         
         let (input, _) = inputs[player.handle];
         
-        let mut direction = Vec2::ZERO;
+        let direction = direction(input);
         
-        if input & INPUT_UP != 0 {
-            direction.y += 1.;
-        }
-        if input & INPUT_DOWN != 0 {
-            direction.y -= 1.;
-        }
-        if input & INPUT_RIGHT != 0 {
-            direction.x += 1.;
-        }
-        if input & INPUT_LEFT != 0 {
-            direction.x -= 1.;
-        }
         if direction == Vec2::ZERO {
             continue;
         }
@@ -207,3 +164,4 @@ fn move_players(
 
     }
 }
+
