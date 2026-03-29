@@ -63,8 +63,7 @@ fn setup(mut commands: Commands) {
 fn start_matchbox_socket(mut commands: Commands) {
     // Part before ? is an id, if we want to host multiple games on one matchbox server
     // after ? is for 2 players if i understood right
-    let room_url = "ws://127.0.0.1:3536/p2p_demo?next=2";
-
+    let room_url = "wss://www.okoloki.com/matchbox/p2p_demo?next=2";
     //let room_url = "wss://okoloki.com/matchbox/p2pdems?next=2";
 
     info!("connectiog to matchbox server: {room_url}");
